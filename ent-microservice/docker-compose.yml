@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  ent-fastapi:
+    build:
+      context: ./est-sale-backend
+    container_name: ent-fastapi
+
+    ports:
+      - "8002:8000"
+    environment:
+      - PYTHONPATH=/app
+    #   - CASSANDRA_HOST=ent-cassandra
+    #   - CASSANDRA_USERNAME=cassandra
+    #   - CASSANDRA_PASSWORD=cassandra
+    # depends_on:
+    #   ent-cassandra:
+    #     condition: service_healthy
+    networks:
+      - est-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ent-cassandra:
+  #   image: cassandra:5.0.4
+  #   container_name: ent-cassandra
+  #   hostname: ent-cassandra
+  #   ports:
+  #     - "9043:9042"
+  #   volumes:
+  #     - ent_cassandra_data:/var/lib/cassandra
+  #   environment:
+  #     - CASSANDRA_CLUSTER_NAME=ent-Cluster
+  #     - CASSANDRA_DC=datacenter2
+  #     - CASSANDRA_SEEDS=ent-cassandra
+  #     - MAX_HEAP_SIZE=512M
+  #     - HEAP_NEWSIZE=100M
+  #   networks:
+  #     - est-network
+  #   healthcheck:
+  #     test: ["CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "DESCRIBE KEYSPACES"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+
+networks:
+  est-network:
+    external: true
+
+volumes:
+  ent_cassandra_data:

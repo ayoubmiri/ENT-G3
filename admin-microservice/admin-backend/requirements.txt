@@ -1,0 +1,18 @@
+fastapi
+fastapi-keycloak
+uvicorn
+cassandra-driver
+python-jose
+python-multipart
+passlib
+pydantic
+pydantic[email]
+pydantic-settings
+# cassandra-cqlengine
+cryptography
+httpx 
+python-jose[cryptography]
+pyjwt
+python-dotenv
+python-keycloak>=3.9.0
+
