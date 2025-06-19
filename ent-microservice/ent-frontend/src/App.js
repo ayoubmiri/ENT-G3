@@ -17,6 +17,7 @@ import EspaceEtudiant from './pages/EspaceEtudiant';
 import EspaceEnseignant from './pages/EspaceEnseignant';
 import Chatbot from './pages/chatbot'; 
 import UploadPage from './pages/UploadPage';  
+import DownloadPage from './pages/DownloadPage';  
 
 function App() {
   return (
@@ -43,6 +44,34 @@ function App() {
           }
         />
         <Route
+          path="/espace-etudiant/download"
+          element={
+            <PrivateRoute role="etudiant">
+              <DownloadPage />
+            </PrivateRoute>
+          }
+        />
+        
+        <Route
+          path="/profil/etudiant"
+          element={
+            <PrivateRoute role="etudiant">
+              <EtudiantProfile />
+            </PrivateRoute>
+          }
+        />
+
+
+
+        <Route
+          path="/profil/enseignant"
+          element={
+            <PrivateRoute role="enseignant">
+              <EnseignantProfile />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/espace-enseignant"
           element={
             <PrivateRoute role="enseignant">
@@ -58,22 +87,6 @@ function App() {
               </PrivateRoute>
             }
           />
-        <Route
-          path="/profil/etudiant"
-          element={
-            <PrivateRoute role="etudiant">
-              <EtudiantProfile />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/profil/enseignant"
-          element={
-            <PrivateRoute role="enseignant">
-              <EnseignantProfile />
-            </PrivateRoute>
-          }
-        />
       </Routes>
       <Footer />
     </div>

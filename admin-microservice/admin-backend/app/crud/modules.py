@@ -231,6 +231,33 @@ def update_module(id: UUID, data: ModuleUpdate) -> Optional[ModuleInDB]:
         logger.exception(f"Error updating module: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating module: {str(e)}")
 
+def get_modules_by_filiere(filiere_id: UUID, skip: int = 0, limit: int = 100, search: str = '') -> Dict:
+    try:
+        logger.debug(f"Fetching modules for filiere_id={filiere_id}, skip={skip}, limit={limit}, search={search}")
+        # Validate filiere_id
+        if not Filiere.objects(id=filiere_id).first():
+            raise HTTPException(status_code=400, detail="Invalid filiere_id")
+        modules = Module.objects(filiere_id=filiere_id).allow_filtering()
+        total = modules.count()
+        modules_list = list(modules)
+        if search:
+            logger.debug(f"Applying in-memory search filter: name contains {search}")
+            modules_list = [m for m in modules_list if search.lower() in (m.name or '').lower()]
+            total = len(modules_list)
+        modules_list = modules_list[skip:skip + limit]
+        result = {
+            "modules": [ModuleInDB(**module_to_dict(m)) for m in modules_list],
+            "total": total
+        }
+        logger.debug(f"Retrieved {len(modules_list)} of {total} modules for filiere_id={filiere_id}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error retrieving modules for filiere {filiere_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving modules: {str(e)}")
+
+
 def delete_module(id: UUID) -> bool:
     try:
         module = Module.objects(id=id).first()

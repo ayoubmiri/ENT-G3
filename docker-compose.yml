@@ -48,15 +48,15 @@ services:
       timeout: 10s
       retries: 5
 
-  admin-frontend:
-    build:
-      context: ./admin-microservice/admin-frontend
-      dockerfile: Dockerfile
-    container_name: admin-frontend
-    ports:
-      - "3000:3000"
-    networks:
-      - est-network
+  # admin-frontend:
+  #   build:
+  #     context: ./admin-microservice/admin-frontend
+  #     dockerfile: Dockerfile
+  #   container_name: admin-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - est-network
   
 
 
@@ -117,15 +117,15 @@ services:
   #     retries: 3
 
 
-  ent-frontend:
-    build:
-      context: ./ent-microservice/ent-frontend
-      dockerfile: Dockerfile
-    container_name: ent-frontend 
-    ports:
-      - "3001:3000"
-    networks:
-      - est-network
+  # ent-frontend:
+  #   build:
+  #     context: ./ent-microservice/ent-frontend
+  #     dockerfile: Dockerfile
+  #   container_name: ent-frontend 
+  #   ports:
+  #     - "3001:3000"
+  #   networks:
+  #     - est-network
 
 
   ###############  auth    ###################

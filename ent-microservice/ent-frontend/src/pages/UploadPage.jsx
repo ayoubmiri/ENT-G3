@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect } from 'react';
 // import { Link } from 'react-router-dom';
 // import { useAuth } from '../contexts/AuthContext';
@@ -21,12 +22,14 @@
 //   FaTimes,
 //   FaDownload
 // } from 'react-icons/fa';
+// import api from '../services/api';
 
 // const UploadPage = () => {
 //   const { user } = useAuth();
 //   const [file, setFile] = useState(null);
 //   const [formData, setFormData] = useState({
 //     filiere: '',
+//     filiereId: '', // Added to store filiere ID
 //     module: '',
 //     element: '',
 //     titre: ''
@@ -39,9 +42,67 @@
 //   const [filesError, setFilesError] = useState(null);
 //   const [editingFile, setEditingFile] = useState(null);
 //   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+//   const [selectedFiliere, setSelectedFiliere] = useState('');
+//   const [filiereOptions, setFiliereOptions] = useState([]);
+//   const [dbFilieres, setDbFilieres] = useState([]);
+//   const [dbModules, setDbModules] = useState([]); // State for modules from DB
+
+//   // Fetch filieres from DB
+//   const fetchDbFilieres = async () => {
+//     if (!user?.token) {
+//       setError('Authentication token is missing. Please log in again.');
+//       return;
+//     }
+
+//     try {
+//       const response = await fetch('http://localhost:8001/api/v1/filieres/?skip=0&limit=100', {
+//         method: 'GET',
+//         headers: {
+//           Authorization: `Bearer ${user.token}`,
+//         },
+//       });
+
+//       const data = await response.json();
+//       if (!response.ok) {
+//         if (response.status === 401) {
+//           throw new Error('Unauthorized: Invalid or expired token. Please log in again.');
+//         }
+//         throw new Error(data.detail || `Failed to fetch filieres (status: ${response.status}).`);
+//       }
+
+//       setDbFilieres(data || []);
+//     } catch (err) {
+//       setError(err.message || 'An unexpected error occurred while fetching filieres. Please try again later.');
+//     }
+//   };
+
+//   // Fetch modules by filiere ID
+//   const fetchDbModules = async (filiereId) => {
+//     if (!user?.token || !filiereId) {
+//       setError('Authentication token or filiere ID is missing.');
+//       return;
+//     }
+
+//     try {
+//       const response = await api.get(`/modules/filiere/${filiereId}`, {
+//         params: { search: '', page: 1, limit: 100 },
+//         headers: {
+//           Authorization: `Bearer ${user.token}`,
+//         },
+//       });
+
+//       if (!response.data) {
+//         throw new Error('No modules found for the selected filiere.');
+//       }
+
+//       setDbModules(response.data || []);
+//     } catch (err) {
+//       setError(err.message || 'An unexpected error occurred while fetching modules. Please try again later.');
+//     }
+//   };
 
 //   // Fetch uploaded files
-//   const fetchFiles = async () => {
+//   const fetchFiles = async (filiere = '') => {
 //     if (!user?.token) {
 //       setFilesError('Authentication token is missing. Please log in again.');
 //       return;
@@ -51,7 +112,10 @@
 //     setFilesError(null);
 
 //     try {
-//       const response = await fetch('http://localhost:8005/list-files/', {
+//       const url = filiere 
+//         ? `http://localhost:8002/list-files/?filiere=${encodeURIComponent(filiere)}`
+//         : 'http://localhost:8002/list-files/';
+//       const response = await fetch(url, {
 //         method: 'GET',
 //         headers: {
 //           Authorization: `Bearer ${user.token}`,
@@ -67,6 +131,10 @@
 //       }
 
 //       setFiles(data.files || []);
+//       if (!filiere) {
+//         const uniqueFilieres = [...new Set(data.files.map(file => file.metadata.filiere))].filter(Boolean);
+//         setFiliereOptions(uniqueFilieres);
+//       }
 //     } catch (err) {
 //       setFilesError(err.message || 'An unexpected error occurred while fetching files. Please try again later.');
 //     } finally {
@@ -74,16 +142,36 @@
 //     }
 //   };
 
-//   // Fetch files on mount and after successful upload/update
+//   // Fetch filieres and files on mount
 //   useEffect(() => {
 //     if (user) {
+//       fetchDbFilieres();
 //       fetchFiles();
 //     }
 //   }, [user]);
 
+//   // Fetch modules when filiere changes
+//   useEffect(() => {
+//     if (formData.filiereId) {
+//       fetchDbModules(formData.filiereId);
+//     } else {
+//       setDbModules([]); // Clear modules if no filiere is selected
+//     }
+//   }, [formData.filiereId]);
+
 //   const handleInputChange = (e) => {
 //     const { name, value } = e.target;
-//     setFormData((prev) => ({ ...prev, [name]: value }));
+//     if (name === 'filiere') {
+//       const selectedFiliere = dbFilieres.find(f => f.name === value);
+//       setFormData((prev) => ({
+//         ...prev,
+//         filiere: value,
+//         filiereId: selectedFiliere ? selectedFiliere.id : '',
+//         module: '' // Reset module when filiere changes
+//       }));
+//     } else {
+//       setFormData((prev) => ({ ...prev, [name]: value }));
+//     }
 //   };
 
 //   const handleFileChange = (e) => {
@@ -98,9 +186,11 @@
 //   };
 
 //   const handleEdit = (file) => {
+//     const selectedFiliere = dbFilieres.find(f => f.name === file.metadata.filiere);
 //     setEditingFile(file);
 //     setFormData({
 //       filiere: file.metadata.filiere,
+//       filiereId: selectedFiliere ? selectedFiliere.id : '',
 //       module: file.metadata.module,
 //       element: file.metadata.element,
 //       titre: file.metadata.titre
@@ -108,14 +198,15 @@
 //     setFile(null);
 //     setError(null);
 //     setSuccess(null);
-//     document.getElementById('fileInput').value = ''; // Reset file input
-//     setIsSidebarOpen(false); // Close sidebar on mobile
+//     document.getElementById('fileInput').value = '';
+//     setIsSidebarOpen(false);
 //   };
 
 //   const handleCancelEdit = () => {
 //     setEditingFile(null);
 //     setFormData({
 //       filiere: '',
+//       filiereId: '',
 //       module: '',
 //       element: '',
 //       titre: ''
@@ -123,7 +214,7 @@
 //     setFile(null);
 //     setError(null);
 //     setSuccess(null);
-//     document.getElementById('fileInput').value = ''; // Reset file input
+//     document.getElementById('fileInput').value = '';
 //   };
 
 //   const handleDownload = async (object_name) => {
@@ -133,7 +224,7 @@
 //     }
 
 //     try {
-//       const response = await fetch(`http://localhost:8005/download/${encodeURIComponent(object_name)}`, {
+//       const response = await fetch(`http://localhost:8002/download/${encodeURIComponent(object_name)}`, {
 //         method: 'GET',
 //         headers: {
 //           Authorization: `Bearer ${user.token}`,
@@ -151,7 +242,6 @@
 //         throw new Error(data.detail || `Failed to download file (status: ${response.status}).`);
 //       }
 
-//       // Create blob and trigger download
 //       const blob = await response.blob();
 //       const url = window.URL.createObjectURL(blob);
 //       const a = document.createElement('a');
@@ -161,11 +251,20 @@
 //       a.click();
 //       a.remove();
 //       window.URL.revokeObjectURL(url);
-
 //     } catch (err) {
 //       setFilesError(err.message || 'An unexpected error occurred while downloading the file. Please try again later.');
-//       console.error('Download failed:', err);
 //     }
+//   };
+
+//   const handleFiliereChange = (e) => {
+//     const filiere = e.target.value;
+//     setSelectedFiliere(filiere);
+//     fetchFiles(filiere);
+//   };
+
+//   const handleClearFilter = () => {
+//     setSelectedFiliere('');
+//     fetchFiles();
 //   };
 
 //   const handleSubmit = async (e) => {
@@ -199,8 +298,8 @@
 
 //     try {
 //       const url = editingFile 
-//         ? `http://localhost:8005/update/${encodeURIComponent(editingFile.object_name)}`
-//         : 'http://localhost:8005/upload/';
+//         ? `http://localhost:8002/update/${encodeURIComponent(editingFile.object_name)}`
+//         : 'http://localhost:8002/upload/';
 //       const method = editingFile ? 'PUT' : 'POST';
 
 //       const response = await fetch(url, {
@@ -229,14 +328,13 @@
 //       }
 
 //       setSuccess(`File ${editingFile ? 'updated' : 'uploaded'} successfully to bucket ${data.bucket}!`);
-//       setFormData({ filiere: '', module: '', element: '', titre: '' });
+//       setFormData({ filiere: '', filiereId: '', module: '', element: '', titre: '' });
 //       setFile(null);
 //       setEditingFile(null);
-//       document.getElementById('fileInput').value = ''; // Reset file input
-//       await fetchFiles(); // Refresh file list
+//       document.getElementById('fileInput').value = '';
+//       await fetchFiles(selectedFiliere);
 //     } catch (err) {
 //       setError(err.message || `An unexpected error occurred while ${editingFile ? 'updating' : 'uploading'} the file. Please try again later.`);
-//       console.error('Request failed:', err);
 //     } finally {
 //       setLoading(false);
 //     }
@@ -376,29 +474,36 @@
 //                 <label htmlFor="filiere" className="block text-xs sm:text-sm font-medium text-gray-700">
 //                   Filière
 //                 </label>
-//                 <input
-//                   type="text"
+//                 <select
 //                   id="filiere"
 //                   name="filiere"
 //                   value={formData.filiere}
 //                   onChange={handleInputChange}
 //                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
-//                   placeholder="Ex: Informatique"
-//                 />
+//                 >
+//                   <option value="">Sélectionnez une filière</option>
+//                   {dbFilieres.map((filiere, index) => (
+//                     <option key={index} value={filiere.name}>{filiere.name}</option>
+//                   ))}
+//                 </select>
 //               </div>
 //               <div>
 //                 <label htmlFor="module" className="block text-xs sm:text-sm font-medium text-gray-700">
 //                   Module
 //                 </label>
-//                 <input
-//                   type="text"
+//                 <select
 //                   id="module"
 //                   name="module"
 //                   value={formData.module}
 //                   onChange={handleInputChange}
 //                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
-//                   placeholder="Ex: Programmation"
-//                 />
+//                   disabled={!formData.filiereId}
+//                 >
+//                   <option value="">Sélectionnez un module</option>
+//                   {dbModules.map((module, index) => (
+//                     <option key={index} value={module.name}>{module.name}</option>
+//                   ))}
+//                 </select>
 //               </div>
 //               <div>
 //                 <label htmlFor="element" className="block text-xs sm:text-sm font-medium text-gray-700">
@@ -451,7 +556,29 @@
 //           </div>
 
 //           <div className="files-list bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
-//             <h2 className="text-est-blue text-base sm:text-lg font-semibold mb-4">Mes Fichiers Téléchargés</h2>
+//             <div className="flex justify-between items-center mb-4">
+//               <h2 className="text-est-blue text-base sm:text-lg font-semibold">Mes Fichiers Téléchargés</h2>
+//               <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+//                 <select
+//                   value={selectedFiliere}
+//                   onChange={handleFiliereChange}
+//                   className="px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
+//                 >
+//                   <option value="">Toutes les filières</option>
+//                   {filiereOptions.map((filiere, index) => (
+//                     <option key={index} value={filiere}>{filiere}</option>
+//                   ))}
+//                 </select>
+//                 {selectedFiliere && (
+//                   <button
+//                     onClick={handleClearFilter}
+//                     className="px-3 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition text-xs sm:text-sm"
+//                   >
+//                     Effacer le filtre
+//                   </button>
+//                 )}
+//               </div>
+//             </div>
 //             {filesError && (
 //               <p className="text-red-500 mb-4 text-sm sm:text-base">{filesError}</p>
 //             )}
@@ -460,7 +587,7 @@
 //                 <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-t-2 border-b-2 border-est-blue"></div>
 //               </div>
 //             ) : files.length === 0 ? (
-//               <p className="text-gray-600 text-sm sm:text-base">Aucun fichier téléchargé pour le moment.</p>
+//               <p className="text-gray-600 text-sm sm:text-base">{selectedFiliere ? `Aucun fichier trouvé pour la filière ${selectedFiliere}.` : 'Aucun fichier téléchargé pour le moment.'}</p>
 //             ) : (
 //               <div className="overflow-x-auto">
 //                 <table className="min-w-full divide-y divide-gray-200 hidden sm:table">
@@ -496,7 +623,7 @@
 //                               className="text-est-blue hover:text-blue-900 flex items-center"
 //                               title="Télécharger"
 //                             >
-//                               <FaDownload className="inline mr-1" /> {file.object_name}{/* Télécharger */}
+//                               <FaDownload className="inline mr-1" /> Télécharger
 //                             </button>
 //                           </div>
 //                         </td>
@@ -554,6 +681,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -577,13 +706,16 @@ import {
   FaTimes,
   FaDownload
 } from 'react-icons/fa';
+import api from '../services/api';
 
 const UploadPage = () => {
   const { user } = useAuth();
   const [file, setFile] = useState(null);
   const [formData, setFormData] = useState({
     filiere: '',
+    filiereId: '',
     module: '',
+    moduleId: '', // Added to store module ID
     element: '',
     titre: ''
   });
@@ -597,6 +729,88 @@ const UploadPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedFiliere, setSelectedFiliere] = useState('');
   const [filiereOptions, setFiliereOptions] = useState([]);
+  const [dbFilieres, setDbFilieres] = useState([]);
+  const [dbModules, setDbModules] = useState([]);
+  const [dbElements, setDbElements] = useState([]); // State for elements from DB
+
+  // Fetch filieres from DB
+  const fetchDbFilieres = async () => {
+    if (!user?.token) {
+      setError('Authentication token is missing. Please log in again.');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8001/api/v1/filieres/?skip=0&limit=100', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized: Invalid or expired token. Please log in again.');
+        }
+        throw new Error(data.detail || `Failed to fetch filieres (status: ${response.status}).`);
+      }
+
+      setDbFilieres(data || []);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred while fetching filieres. Please try again later.');
+    }
+  };
+
+  // Fetch modules by filiere ID
+  const fetchDbModules = async (filiereId) => {
+    if (!user?.token || !filiereId) {
+      setError('Authentication token or filiere ID is missing.');
+      return;
+    }
+
+    try {
+      const response = await api.get(`/modules/filiere/${filiereId}`, {
+        params: { search: '', page: 1, limit: 100 },
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.data) {
+        throw new Error('No modules found for the selected filiere.');
+      }
+
+      setDbModules(response.data || []);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred while fetching modules. Please try again later.');
+    }
+  };
+
+  // Fetch elements by module ID
+  const fetchDbElements = async (moduleId) => {
+    if (!user?.token || !moduleId) {
+      setError('Authentication token or module ID is missing.');
+      return;
+    }
+
+    try {
+      const response = await api.get(`/elements/module/${moduleId}`, {
+        params: { search: '', page: 1, limit: 100 },
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.data) {
+        throw new Error('No elements found for the selected module.');
+      }
+
+      setDbElements(response.data || []);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred while fetching elements. Please try again later.');
+    }
+  };
 
   // Fetch uploaded files
   const fetchFiles = async (filiere = '') => {
@@ -620,7 +834,6 @@ const UploadPage = () => {
       });
 
       const data = await response.json();
-      console.log('List files response:', data); // Debug response
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Unauthorized: Invalid or expired token. Please log in again.');
@@ -629,7 +842,6 @@ const UploadPage = () => {
       }
 
       setFiles(data.files || []);
-      // Update filiere options only when fetching unfiltered list
       if (!filiere) {
         const uniqueFilieres = [...new Set(data.files.map(file => file.metadata.filiere))].filter(Boolean);
         setFiliereOptions(uniqueFilieres);
@@ -641,16 +853,56 @@ const UploadPage = () => {
     }
   };
 
-  // Fetch files on mount and after successful upload/update
+  // Fetch filieres and files on mount
   useEffect(() => {
     if (user) {
+      fetchDbFilieres();
       fetchFiles();
     }
   }, [user]);
 
+  // Fetch modules when filiere changes
+  useEffect(() => {
+    if (formData.filiereId) {
+      fetchDbModules(formData.filiereId);
+    } else {
+      setDbModules([]);
+      setDbElements([]); // Clear elements when no filiere is selected
+    }
+  }, [formData.filiereId]);
+
+  // Fetch elements when module changes
+  useEffect(() => {
+    if (formData.moduleId) {
+      fetchDbElements(formData.moduleId);
+    } else {
+      setDbElements([]); // Clear elements when no module is selected
+    }
+  }, [formData.moduleId]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'filiere') {
+      const selectedFiliere = dbFilieres.find(f => f.name === value);
+      setFormData((prev) => ({
+        ...prev,
+        filiere: value,
+        filiereId: selectedFiliere ? selectedFiliere.id : '',
+        module: '', // Reset module when filiere changes
+        moduleId: '', // Reset moduleId
+        element: '' // Reset element
+      }));
+    } else if (name === 'module') {
+      const selectedModule = dbModules.find(m => m.name === value);
+      setFormData((prev) => ({
+        ...prev,
+        module: value,
+        moduleId: selectedModule ? selectedModule.id : '',
+        element: '' // Reset element when module changes
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -665,32 +917,38 @@ const UploadPage = () => {
   };
 
   const handleEdit = (file) => {
+    const selectedFiliere = dbFilieres.find(f => f.name === file.metadata.filiere);
+    const selectedModule = dbModules.find(m => m.name === file.metadata.module);
     setEditingFile(file);
     setFormData({
       filiere: file.metadata.filiere,
+      filiereId: selectedFiliere ? selectedFiliere.id : '',
       module: file.metadata.module,
+      moduleId: selectedModule ? selectedModule.id : '',
       element: file.metadata.element,
       titre: file.metadata.titre
     });
     setFile(null);
     setError(null);
     setSuccess(null);
-    document.getElementById('fileInput').value = ''; // Reset file input
-    setIsSidebarOpen(false); // Close sidebar on mobile
+    document.getElementById('fileInput').value = '';
+    setIsSidebarOpen(false);
   };
 
   const handleCancelEdit = () => {
     setEditingFile(null);
     setFormData({
       filiere: '',
+      filiereId: '',
       module: '',
+      moduleId: '',
       element: '',
       titre: ''
     });
     setFile(null);
     setError(null);
     setSuccess(null);
-    document.getElementById('fileInput').value = ''; // Reset file input
+    document.getElementById('fileInput').value = '';
   };
 
   const handleDownload = async (object_name) => {
@@ -718,7 +976,6 @@ const UploadPage = () => {
         throw new Error(data.detail || `Failed to download file (status: ${response.status}).`);
       }
 
-      // Create blob and trigger download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -728,10 +985,8 @@ const UploadPage = () => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-
     } catch (err) {
       setFilesError(err.message || 'An unexpected error occurred while downloading the file. Please try again later.');
-      console.error('Download failed:', err);
     }
   };
 
@@ -806,15 +1061,14 @@ const UploadPage = () => {
         throw new Error(data.detail || `Failed to ${editingFile ? 'update' : 'upload'} file (status: ${response.status}).`);
       }
 
-      setSuccess(`File ${editingFile ? 'updated' : 'uploaded'} successfully to bucket ${data.bucket}!`);
-      setFormData({ filiere: '', module: '', element: '', titre: '' });
+      setSuccess(`Fichier ${editingFile ? 'mis à jour' : 'téléchargé'} avec succès dans le bucket !`);
+      setFormData({ filiere: '', filiereId: '', module: '', moduleId: '', element: '', titre: '' });
       setFile(null);
       setEditingFile(null);
-      document.getElementById('fileInput').value = ''; // Reset file input
-      await fetchFiles(selectedFiliere); // Refresh file list with current filter
+      document.getElementById('fileInput').value = '';
+      await fetchFiles(selectedFiliere);
     } catch (err) {
       setError(err.message || `An unexpected error occurred while ${editingFile ? 'updating' : 'uploading'} the file. Please try again later.`);
-      console.error('Request failed:', err);
     } finally {
       setLoading(false);
     }
@@ -954,43 +1208,54 @@ const UploadPage = () => {
                 <label htmlFor="filiere" className="block text-xs sm:text-sm font-medium text-gray-700">
                   Filière
                 </label>
-                <input
-                  type="text"
+                <select
                   id="filiere"
                   name="filiere"
                   value={formData.filiere}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
-                  placeholder="Ex: Informatique"
-                />
+                >
+                  <option value="">Sélectionnez une filière</option>
+                  {dbFilieres.map((filiere, index) => (
+                    <option key={index} value={filiere.name}>{filiere.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="module" className="block text-xs sm:text-sm font-medium text-gray-700">
                   Module
                 </label>
-                <input
-                  type="text"
+                <select
                   id="module"
                   name="module"
                   value={formData.module}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
-                  placeholder="Ex: Programmation"
-                />
+                  disabled={!formData.filiereId}
+                >
+                  <option value="">Sélectionnez un module</option>
+                  {dbModules.map((module, index) => (
+                    <option key={index} value={module.name}>{module.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="element" className="block text-xs sm:text-sm font-medium text-gray-700">
                   Élément
                 </label>
-                <input
-                  type="text"
+                <select
                   id="element"
                   name="element"
                   value={formData.element}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-est-blue"
-                  placeholder="Ex: Cours 1"
-                />
+                  disabled={!formData.moduleId}
+                >
+                  <option value="">Sélectionnez un élément</option>
+                  {dbElements.map((element, index) => (
+                    <option key={index} value={element.name}>{element.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label htmlFor="titre" className="block text-xs sm:text-sm font-medium text-gray-700">

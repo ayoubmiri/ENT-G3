@@ -154,7 +154,7 @@ const EspaceEtudiant = () => {
               </Link>
             </li>
             <li>
-              <Link to="#" className="flex items-center px-3 py-2 rounded hover:bg-gray-100 hover:text-est-blue">
+              <Link to="/download" className="flex items-center px-3 py-2 rounded hover:bg-gray-100 hover:text-est-blue">
                 <FaBookOpen className="mr-2" /> Cours en ligne
               </Link>
             </li>
@@ -244,7 +244,7 @@ const ServiceGrid = () => {
       icon: <FaBook className="mr-2" />,
       title: "Cours en ligne",
       description: "Accéder à la plateforme pédagogique de l'université.",
-      link: "#"
+      link: "download"
     },
     {
       icon: <FaQuestionCircle className="mr-2" />,
