@@ -1,0 +1,21 @@
+
+
+# services:
+#   download-service:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.download
+#     ports:
+#       - "8004:8000"
+#     environment:
+#       - MINIO_ENDPOINT=minio:9000
+#       - MINIO_ACCESS_KEY=minioadmin
+#       - MINIO_SECRET_KEY=minioadmin
+#       - AUTH_SERVICE_URL=http://auth-service:8000/verify-token
+
+
+
+
+# networks:
+#   est-network:
+#     external: true
